@@ -63,7 +63,7 @@ class NetcatGUI:
         """Execute the appropriate gs-netcat command"""
         cmd = ""
         if self.mode.get() == "server":
-            cmd = f"gs-netcat -l {self.ip.get()} -p {self.port.get()} -s {self.password.get()}"
+            cmd = f"gs-netcat -l {self.ip.get()} {self.port.get()} -s {self.password.get()}"
         else:
             cmd = f"gs-netcat -l {self.port.get()} -s {self.password.get()}"
         
