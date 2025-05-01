@@ -63,9 +63,9 @@ class NetcatGUI:
         """Execute the appropriate gs-netcat command"""
         cmd = ""
         if self.mode.get() == "server":
-            cmd = f"gs-netcat -l -d {self.ip.get()} -p {self.port.get()} -s {self.password.get()}"
+            cmd = f"gs-netcat -l {self.ip.get()} -p {self.port.get()} -s {self.password.get()}"
         else:
-            cmd = f"gs-netcat -p {self.port.get()} -s {self.password.get()}"
+            cmd = f"gs-netcat -l {self.port.get()} -s {self.password.get()}"
         
         print(f"Executing: {cmd}")  # For debugging
         subprocess.Popen(cmd, shell=True)
