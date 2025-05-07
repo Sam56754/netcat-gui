@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-from tkinter import *
-import subprocess
-import psutil
-import time
-import socket
-=======
 import tkinter as tk
 from tkinter import *
 import subprocess
@@ -13,29 +6,17 @@ import socket
 import threading
 import queue
 
->>>>>>> aee1cc7 (version 2 - chat features)
 
 class NetcatGUI:
     def __init__(self, root):
         self.root = root
-<<<<<<< HEAD
-        self.root.title("GS-Netcat Controller v1.3")
-        self.root.geometry("500x400")
-=======
         self.root.title("GS-Netcat Controller v2.1 with Chat Bubbles")
         self.root.geometry("500x550")
         self.root.resizable(False, False)
->>>>>>> aee1cc7 (version 2 - chat features)
         
         # Variables
         self.mode = StringVar(value="")
         self.ip = StringVar(value="127.0.0.1")
-<<<<<<< HEAD
-        self.port = StringVar(value="12345")  # Changed from 22
-        self.password = StringVar()
-        self.process = None
-        self.connection_socket = None #port cleanup
-=======
         self.port = StringVar(value=str(self.find_available_port()))
         self.password = StringVar()
         self.process = None
@@ -51,7 +32,6 @@ class NetcatGUI:
         self.stdout_queue = queue.Queue()
         self.read_thread = None
         self.reading = False
->>>>>>> aee1cc7 (version 2 - chat features)
         
         self.show_mode_selection()
 
@@ -63,10 +43,6 @@ class NetcatGUI:
             pass
 
     def show_mode_selection(self):
-<<<<<<< HEAD
-        """First screen: Choose server or client mode"""
-=======
->>>>>>> aee1cc7 (version 2 - chat features)
         self.clear_window()
         
         Label(self.root, text="Select Mode:", font=('Arial', 14)).pack(pady=20)
@@ -78,14 +54,8 @@ class NetcatGUI:
         
         Button(self.root, text="Continue", command=self.show_connection_settings,
               font=('Arial', 12)).pack(pady=20)
-<<<<<<< HEAD
-
-    def show_connection_settings(self):
-        """Second screen: Show connection fields based on mode"""
-=======
         
     def show_connection_settings(self):
->>>>>>> aee1cc7 (version 2 - chat features)
         if not self.mode.get():
             return
             
@@ -110,32 +80,13 @@ class NetcatGUI:
         Button(self.root, text="Back", command=self.show_mode_selection).pack()
 
     def start_connection(self):
-<<<<<<< HEAD
-        """Execute the appropriate gs-netcat command with error handling"""
-        self.force_release_port(self.port.get())
-        self.kill_existing_connections()
-        
-=======
         self.force_release_port(int(self.port.get()))
         self.kill_existing_connections()
 
->>>>>>> aee1cc7 (version 2 - chat features)
         try:
             self.connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.connection_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
             self.connection_socket.bind(('', int(self.port.get())))
-<<<<<<< HEAD
-        
-            cmd = ""
-            if self.mode.get() == "server":
-                cmd = f"gs-netcat -l {self.ip.get()} {self.port.get()} -s {self.password.get()}"
-            else:
-                cmd = f"gs-netcat -l {self.port.get()} -s {self.password.get()}"
-            
-            self.process = subprocess.Popen(cmd, shell=True)
-            self.show_connection_status(cmd)
-            
-=======
             
             cmd_args = []
             if self.mode.get() == "server":
@@ -158,54 +109,12 @@ class NetcatGUI:
             self.read_thread = threading.Thread(target=self._read_output, daemon=True)
             self.read_thread.start()
 
->>>>>>> aee1cc7 (version 2 - chat features)
         except socket.error:
             self.show_port_error()
         except Exception as e:
             self.show_error(str(e))
 
     def show_connection_status(self, cmd):
-<<<<<<< HEAD
-        """Show successful connection status"""
-        self.clear_window()
-        Label(self.root, text="✓ commands accepted", 
-             font=('Arial', 14), fg="green").pack(pady=20)
-        Label(self.root, text=f"Mode: {self.mode.get().title()}\nPort: {self.port.get()}").pack()
-        
-        console = Text(self.root, height=10, width=50)
-        console.pack(pady=10, padx=10)
-        console.insert(END, f"$ {cmd}\n")
-        
-        Button(self.root, text="Disconnect", command=self.disconnect,
-              bg="red", fg="white").pack(pady=10)
-
-    def show_port_error(self):
-        """Show port in use error"""
-        self.clear_window()
-        Label(self.root, text="⚠ Port Error", font=('Arial', 14), fg="red").pack()
-        Label(self.root, text=f"Port {self.port.get()} is already in use!\nPlease try a different port.").pack()
-        Button(self.root, text="Try Again", command=self.show_connection_settings).pack()
-        Button(self.root, text="Back to Menu", command=self.show_mode_selection).pack()
-
-    def show_error(self, message):
-        """Show general error"""
-        self.clear_window()
-        Label(self.root, text="Error", font=('Arial', 14), fg="red").pack()
-        Label(self.root, text=message).pack()
-        Button(self.root, text="Back", command=self.show_mode_selection).pack()
-        
-    def disconnect(self):
-        """Clean up connection and release port"""
-        # 1. Terminate the process
-        if self.process:
-            try:
-                self.process.terminate()
-                self.process.wait(timeout=2)
-            except:
-                self.process.kill()
-        
-        # 2. Close our port-holding socket
-=======
         self.clear_window()
 
         Label(self.root, text="✓ connected succesfully", 
@@ -354,29 +263,11 @@ class NetcatGUI:
                     pass
             self.process = None
         
->>>>>>> aee1cc7 (version 2 - chat features)
         if self.connection_socket:
             try:
                 self.connection_socket.close()
             except:
                 pass
-<<<<<<< HEAD
-        
-        # 3. Additional cleanup for stubborn ports
-        self.force_release_port(int(self.port.get()))
-        
-        self.show_mode_selection()
-
-    def force_release_port(self, port):
-        """Forcefully release a port by killing processes using it"""
-        try:
-            for proc in psutil.process_iter(['pid', 'name', 'connections']):
-                try:
-                    for conn in proc.connections():
-                        if conn.laddr.port == port:
-                            proc.terminate()
-                            proc.wait(timeout=1)
-=======
             self.connection_socket = None
         
         try:
@@ -398,24 +289,10 @@ class NetcatGUI:
                                 proc.wait(timeout=1)
                             except:
                                 pass
->>>>>>> aee1cc7 (version 2 - chat features)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
         except Exception as e:
             print(f"Port cleanup warning: {str(e)}")
-<<<<<<< HEAD
-            
-            
-    def clear_window(self):
-        """Remove all widgets from the window"""
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-# Run the application
-root = Tk()
-app = NetcatGUI(root)
-root.mainloop()
-=======
         
     def find_available_port(self, start_port=7783):
         port = start_port
@@ -436,4 +313,3 @@ if __name__ == "__main__":
     root = Tk()
     app = NetcatGUI(root)
     root.mainloop()
->>>>>>> aee1cc7 (version 2 - chat features)
