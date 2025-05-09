@@ -90,7 +90,7 @@ class NetcatGUI:
             
             cmd_args = []
             if self.mode.get() == "server":
-                cmd_args = ["gs-netcat", "-l", self.ip.get(), self.port.get(), "-s", self.password.get()]
+                cmd_args = ["gs-netcat", "-l", "-s", self.password.get()]
             else:
                 cmd_args = ["gs-netcat", "-l", self.port.get(), "-s", self.password.get()]
 
