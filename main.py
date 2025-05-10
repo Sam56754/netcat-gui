@@ -1,7 +1,6 @@
-import tkinter as tk
 from tkinter import *
+import time
 import subprocess
-import psutil
 import socket
 import threading
 import queue
@@ -16,8 +15,6 @@ class NetcatGUI:
         
         # Variables
         self.mode = StringVar(value="")
-        self.ip = StringVar(value="127.0.0.1")
-        self.port = StringVar(value=str(self.find_available_port()))
         self.password = StringVar()
         self.process = None
         self.connection_socket = None
@@ -26,7 +23,7 @@ class NetcatGUI:
         self.chat_canvas = None
         self.chat_frame = None
         self.chat_scrollbar = None
-        self.msg_entry = None
+        self.msg_entry = None 
         self.send_button = None
         
         self.stdout_queue = queue.Queue()
@@ -58,68 +55,78 @@ class NetcatGUI:
     def show_connection_settings(self):
         if not self.mode.get():
             return
-            
-        self.clear_window()
         
+        self.clear_window()
+    
         Label(self.root, text=f"{self.mode.get().title()} Settings", 
              font=('Arial', 14)).pack(pady=10)
-        
-        if self.mode.get() == "server":
-            Label(self.root, text="Server IP:").pack()
-            Entry(self.root, textvariable=self.ip).pack()
-        
-        Label(self.root, text="Port:").pack()
-        Entry(self.root, textvariable=self.port).pack()
-        
+    
+
         Label(self.root, text="Password:").pack()
         Entry(self.root, textvariable=self.password, show="*").pack()
-        
-        Button(self.root, text="START", command=self.start_connection,
-              font=('Arial', 12), bg="green").pack(pady=20)
-        
-        Button(self.root, text="Back", command=self.show_mode_selection).pack()
+    
+        # Create the START button as a variable so we can bind Enter to its command
+        self.start_button = Button(self.root, text="START", command=self.start_connection,
+                  font=('Arial', 12), bg="green")
+        self.start_button.pack(pady=30)
 
+        # Bind the Enter key to call start_connection when pressed anywhere in this window
+        self.root.bind('<Return>', lambda event: self.start_connection())
+    
+        Button(self.root, text="Back", command=self.show_mode_selection).pack()
+        
     def start_connection(self):
-        self.force_release_port(int(self.port.get()))
         self.kill_existing_connections()
 
-        try:
-            self.connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.connection_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR, 1)
-            self.connection_socket.bind(('', int(self.port.get())))
-            
-            cmd_args = []
-            if self.mode.get() == "server":
-                cmd_args = ["gs-netcat", "-l", "-s", self.password.get()]
-            else:
-                cmd_args = ["gs-netcat", "-l", self.port.get(), "-s", self.password.get()]
+        retries = 100
+        delay = 2  # seconds
 
-            self.process = subprocess.Popen(
-                cmd_args,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=1,
-            )
+        for attempt in range(1, retries + 1):
+            try:
+                self.connection_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.connection_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-            self.show_connection_status(" ".join(cmd_args))
+                cmd_args = []
+                if self.mode.get() == "server":
+                    cmd_args = ["gs-netcat", "-l", "-s", self.password.get()]
+                else:
+                    cmd_args = ["gs-netcat", "-s", self.password.get()]
+                    # NOTE: If you plan to add a custom IP field later, you'd add it here
 
-            self.reading = True
-            self.read_thread = threading.Thread(target=self._read_output, daemon=True)
-            self.read_thread.start()
+                self.process = subprocess.Popen(
+                    cmd_args,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                )
 
-        except socket.error:
-            self.show_port_error()
-        except Exception as e:
-            self.show_error(str(e))
+                self.show_connection_status(" ".join(cmd_args))
+
+                self.reading = True
+                self.read_thread = threading.Thread(target=self._read_output, daemon=True)
+                self.read_thread.start()
+
+                return  # success, exit function
+
+            except Exception as e:
+                self.clear_window()
+                Label(self.root, text="Connection Failed", font=('Arial', 14), fg="red").pack(pady=10)
+                Label(self.root, text=f"Attempt {attempt} of {retries}").pack(pady=5)
+                self.root.update()
+                time.sleep(delay)
+
+            # If we reach here, all attempts failed
+            self.show_error("All connection attempts failed.")
+
 
     def show_connection_status(self, cmd):
         self.clear_window()
 
-        Label(self.root, text="✓ connected succesfully", 
+        Label(self.root, text="✓ Connection established", 
              font=('Arial', 14), fg="green").pack(pady=6)
-        Label(self.root, text=f"Mode: {self.mode.get().title()}    Port: {self.port.get()}", font=('Arial', 10)).pack(pady=4)
+        Label(self.root, text=f"Mode: {self.mode.get().title()}", font=('Arial', 10)).pack(pady=4)
 
         # Chat area setup - scrollable canvas with frame
         chat_container = Frame(self.root)
@@ -147,6 +154,7 @@ class NetcatGUI:
         self.msg_entry = Entry(input_frame, font=('Arial', 12))
         self.msg_entry.pack(side=LEFT, fill=X, expand=True, padx=(0,5))
         self.msg_entry.bind("<Return>", self.send_message)
+        
 
         self.send_button = Button(input_frame, text="Send", command=self.send_message, bg="#25d366", fg="white", font=('Arial', 11))
         self.send_button.pack(side=RIGHT)
@@ -234,13 +242,6 @@ class NetcatGUI:
             except queue.Empty:
                 break
 
-    def show_port_error(self):
-        self.clear_window()
-        Label(self.root, text="⚠ Port Error", font=('Arial', 14), fg="red").pack(pady=10)
-        Label(self.root, text=f"Port {self.port.get()} is already in use!\nPlease try a different port.").pack(pady=5)
-        Button(self.root, text="Try Again", command=self.show_connection_settings).pack(pady=5)
-        Button(self.root, text="Back to Menu", command=self.show_mode_selection).pack(pady=5)
-
     def show_error(self, message):
         self.clear_window()
         Label(self.root, text="Error", font=('Arial', 14), fg="red").pack(pady=10)
@@ -270,40 +271,10 @@ class NetcatGUI:
                 pass
             self.connection_socket = None
         
-        try:
-            self.force_release_port(int(self.port.get()))
-        except Exception:
-            pass
         
         self.stdout_queue.queue.clear()
         self.show_mode_selection()
 
-    def force_release_port(self, port):
-        try:
-            for proc in psutil.process_iter(['pid', 'name', 'connections']):
-                try:
-                    for conn in proc.connections(kind='inet'):
-                        if conn.laddr.port == port:
-                            try:
-                                proc.terminate()
-                                proc.wait(timeout=1)
-                            except:
-                                pass
-                except (psutil.NoSuchProcess, psutil.AccessDenied):
-                    continue
-        except Exception as e:
-            print(f"Port cleanup warning: {str(e)}")
-        
-    def find_available_port(self, start_port=7783):
-        port = start_port
-        while port < 65535:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                try:
-                    s.bind(('', port))
-                    return port
-                except socket.error:
-                    port += 1
-        return start_port
                 
     def clear_window(self):
         for widget in self.root.winfo_children():
